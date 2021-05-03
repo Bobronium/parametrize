@@ -7,7 +7,6 @@ license = "MIT"
 
 [tool.poetry.dependencies]
 python = "^3.6.2"
-pytest-mock = "^3.6.0"
 
 
 [tool.poetry.dev-dependencies]
@@ -21,6 +20,7 @@ flake8-comprehensions = "^3.4.0"
 flake8-bugbear = "^21.4.3"
 pytest-cov = "^2.11.1"
 pytest-sugar = "^0.9.4"
+pytest-mock = "^3.6.0"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
