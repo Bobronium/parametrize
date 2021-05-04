@@ -5,13 +5,15 @@ description = "Drop-in @pytest.mark.parametrize replacement working with unittes
 authors = ["MrMrRobat <appkiller16@gmail.com>"]
 license = "MIT"
 
+[tool.black]
+target_version = ['py35', 'py36', 'py37', 'py38', 'py39']
+
 [tool.poetry.dependencies]
 python = "^3.6.2"
 
-
 [tool.poetry.dev-dependencies]
 pytest = "^6.2.3"
-black = "^21.4b0"
+black = "^21.4b2"
 flake8 = "^3.9.1"
 isort = "^5.8.0"
 mypy = "^0.812"
