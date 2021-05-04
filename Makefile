@@ -3,7 +3,7 @@
 export PIP_CONFIG_FILE=$(shell pwd)/setup.cfg
 
 sources = parametrize
-black = black -S -l 100 --target-version py39 $(sources) tests
+black = black $(sources) tests
 flake8 = flake8 $(sources) --show-source
 isort = isort $(sources) tests
 
