@@ -25,7 +25,7 @@ def assert_parametrized(test_case, *argvalues, name="test_method"):
     return all_cases
 
 
-def assert_tests_passed(test_case, tests_run, failures: List[Tuple[str, str,]] = None):
+def assert_tests_passed(test_case, tests_run, failures: List[Tuple[str, str]] = None):
     result = run_unittests(test_case)
     assert result.testsRun == tests_run
     assert not result.errors
@@ -106,7 +106,7 @@ def test_multiple_parametrize(mocker):
             (
                 f"test_method[{c}-5-6]",
                 (
-                    "self.assertLess(int(a) + int(b), 11, msg=f'{c}')\n"
+                    'self.assertLess(int(a) + int(b), 11, msg=f"{c}")\n'
                     "AssertionError: 11 not less than 11 : " + f"{c}"
                 ),
             )

@@ -1,9 +1,14 @@
 import inspect
 import itertools
 from types import FrameType, FunctionType, ModuleType
-from typing import Any, Iterable, Set, Union
+from typing import Any, Dict, Iterable, List, Set, Tuple, Union, cast
 
 from parametrize.utils import copy_func
+
+
+Parameter = Tuple[str, Any]
+Parameters = Tuple[Parameter, ...]
+ParametersList = List[Parameters]
 
 
 class UnparametrizedMethod:
@@ -17,16 +22,24 @@ class UnparametrizedMethod:
 
 
 class ParametrizeContext:
-    __slots__ = ("func", "parametrizes_left", "all_parameters", "seen_argnames", "signature")
+    __slots__ = (
+        "func",
+        "parametrizes_left",
+        "all_parameters",
+        "seen_argnames",
+        "signature",
+        "decoration_frame",
+    )
 
     def __init__(self, func: FunctionType, decoration_frame: FrameType):
         self.func = func
         self.signature = inspect.signature(func)
         self.parametrizes_left = _count_parametrize_decorators(func, decoration_frame)
-        self.all_parameters = []
-        self.seen_argnames = set()
+        self.all_parameters: List[ParametersList] = []
+        self.seen_argnames: Set[str] = set()
+        self.decoration_frame = decoration_frame
 
-    def add(self, parameters, argnames_set):
+    def add(self, parameters: ParametersList, argnames_set: Set[str]):
         reused_names = argnames_set & self.seen_argnames
         if reused_names:
             raise TypeError(f"Arguments names reused: {reused_names}")
@@ -52,7 +65,7 @@ class ParametrizeContext:
         )
 
 
-def parametrize(argnames: Union[str, Iterable[str],], argvalues: Iterable[Any]):
+def parametrize(argnames: Union[str, Iterable[str]], argvalues: Iterable[Any]):
     """
     class TestSomething(unittest.TestCase):
 
@@ -65,22 +78,18 @@ def parametrize(argnames: Union[str, Iterable[str],], argvalues: Iterable[Any]):
     It generates parametrized test cases and injects them into class namespace
     """
 
-    parametrization_frame = inspect.currentframe().f_back
     parameters, argnames_set = _collect_parameters(argnames, argvalues)
 
     def decorator(
-        func_or_context: Union[FunctionType, ParametrizeContext,]
-    ) -> Union[ParametrizeContext, UnparametrizedMethod,]:
-        decoration_frame = inspect.currentframe().f_back
-        if parametrization_frame is not decoration_frame:
-            _assert_decorator_counted(decoration_frame)
-
+        func_or_context: Union[FunctionType, ParametrizeContext]
+    ) -> Union[ParametrizeContext, UnparametrizedMethod]:
         if isinstance(func_or_context, UnparametrizedMethod):  # we should never end up here
             raise TypeError("Failed to complete parametrization")
 
         if isinstance(func_or_context, ParametrizeContext):
             context = func_or_context
         else:
+            decoration_frame = cast(FrameType, inspect.currentframe().f_back)  # type: ignore
             context = ParametrizeContext(func_or_context, decoration_frame)
 
         context.add(parameters, argnames_set)
@@ -89,15 +98,15 @@ def parametrize(argnames: Union[str, Iterable[str],], argvalues: Iterable[Any]):
             return context  # pass context to the next parametrize decorator
         else:
             # set parametrized functions in place of given one
-            _set_test_cases(decoration_frame.f_locals, context)
+            _set_test_cases(context)
             return UnparametrizedMethod(context.func)
 
-    decorator.__parametrize_decorator__ = True
+    decorator.__parametrize_decorator__ = True  # type: ignore
 
     return decorator
 
 
-def _collect_parameters(argnames, argvalues):
+def _collect_parameters(argnames, argvalues) -> Tuple[ParametersList, Set[str]]:
     if isinstance(argnames, str):
         argnames = list(map(str.strip, argnames.split(",")))
 
@@ -107,7 +116,7 @@ def _collect_parameters(argnames, argvalues):
         raise TypeError("Arguments must not repeat")
 
     parameters = []
-    for (i, values) in enumerate(argvalues):
+    for i, values in enumerate(argvalues):
         if len(argnames) == 1 and isinstance(values, str) or not isinstance(values, Iterable):
             values = (values,)
 
@@ -122,23 +131,22 @@ def _collect_parameters(argnames, argvalues):
     return parameters, argnames_set
 
 
-def _find_possible_decorators(namespace, search_in_modules=True):
-    possible_decorators = set()
-    for (key, value) in namespace.items():
+def _find_possible_decorators(namespace: Dict[str, Any], search_in_modules=True):
+    possible_definitions = set()
+    for key, value in namespace.items():
         if (
             value is parametrize
             or hasattr(value, "__parametrize_decorator__")
-            or hasattr(value, "__wrapped__")
-            and inspect.unwrap(value) is parametrize
+            or (hasattr(value, "__wrapped__") and inspect.unwrap(value) is parametrize)
         ):
-            possible_decorators.add(key)
+            possible_definitions.add(key)
         elif search_in_modules and isinstance(value, ModuleType):
             # allow usages like @my_module.my_predefined_params
-            possible_decorators.update(
+            possible_definitions.update(
                 _find_possible_decorators(value.__dict__, search_in_modules=False)
             )
 
-    return possible_decorators
+    return possible_definitions
 
 
 def _count_parametrize_decorators(function, decoration_frame):
@@ -160,28 +168,15 @@ def _count_parametrize_decorators(function, decoration_frame):
     if not parametrized_count:
         raise RuntimeError(
             f"Unable to find any parametrizes in decorators, "
-            f"please rewrite decorator name to match any of detected names {possible_definitions}"
+            f"please rewrite decorator name to match any of detected names @{possible_definitions}"
         )
     return parametrized_count
 
 
-def _assert_decorator_counted(decoration_frame):
-    (lines, defined_on_line) = inspect.getsourcelines(decoration_frame)
-    expected_definition = f"@{parametrize.__name__}"
-
-    for line in lines:
-        if line.strip().startswith(expected_definition):
-            break
-    else:
-        raise RuntimeError(
-            f"Unable to find {expected_definition} in decorators, "
-            f"please rewrite decorator name to match {expected_definition}(...)"
-        )
-
-
-def _set_test_cases(namespace, context):
+def _set_test_cases(context):
     func = context.func
     used_names: Set[str] = set()
+    namespace = context.decoration_frame.f_locals
 
     for params in context.combined_parameters:
         parameters_str = "-".join(str(v).replace(".", "-") for v in params.values())

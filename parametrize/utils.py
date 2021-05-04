@@ -44,7 +44,7 @@ def copy_func(f: FunctionType, name, defaults, signature: Signature):
     new_defaults = []
     kw_only_defaults = f.__kwdefaults__ or {}
 
-    for (key, param) in signature.parameters.items():
+    for key, param in signature.parameters.items():
         if param.kind is param.KEYWORD_ONLY and key in defaults:
             kw_only_defaults[key] = defaults.pop(key)
         elif key in defaults:
