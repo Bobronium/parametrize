@@ -1,7 +1,7 @@
 import inspect
 import itertools
 from types import FunctionType
-from typing import Set, Union, Any, Iterable
+from typing import Any, Iterable, Set, Union
 
 from parametrize.utils import copy_func
 
@@ -111,11 +111,7 @@ def _collect_parameters(argnames, argvalues):
 
     parameters = []
     for i, values in enumerate(argvalues):
-        if (
-            len(argnames) == 1
-            and isinstance(values, str)
-            or not isinstance(values, Iterable)
-        ):
+        if len(argnames) == 1 and isinstance(values, str) or not isinstance(values, Iterable):
             values = (values,)
 
         if len(values) != len(argnames):
@@ -146,7 +142,6 @@ def _count_parametrize_decorators(function):
         raise RuntimeError(
             f'Unable to find {expected_definition} in decorators, '
             f'please rewrite decorator name to match {expected_definition}(...)'
-
         )
     return parametrized_count
 
@@ -170,9 +165,7 @@ def _set_test_cases(namespace, context):
     used_names: Set[str] = set()
 
     for params in context.combined_parameters:
-        parameters_str = "-".join(
-            str(v).replace('.', '-') for v in params.values()
-        )
+        parameters_str = "-".join(str(v).replace('.', '-') for v in params.values())
 
         methods_with_same_name = 1
         final_parameters_str = parameters_str
@@ -185,9 +178,7 @@ def _set_test_cases(namespace, context):
         used_names.add(final_parameters_str)
         parametrized_name = f'{func_name}[{final_parameters_str}]'
         if parametrized_name in namespace:
-            raise NameError(
-                f'{parametrized_name} is already defined in {namespace}'
-            )
+            raise NameError(f'{parametrized_name} is already defined in {namespace}')
 
         # copying function with new default values. Why I didn't stick to simpler options:"
         # functools.partial will not bound to class
