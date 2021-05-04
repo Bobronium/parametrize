@@ -1,6 +1,6 @@
 from io import StringIO
 from itertools import chain, product
-from typing import Type
+from typing import List, Tuple, Type
 from unittest import TestCase, TextTestRunner, defaultTestLoader
 
 from parametrize import parametrize
@@ -12,7 +12,36 @@ def run_unittests(case: Type[TestCase]):
     return TextTestRunner(stream=StringIO()).run(suite)
 
 
-def test_simple_parametrize_class(mocker):
+def as_tuples(sequence):
+    return [(v,) for v in sequence]
+
+
+def assert_parametrized(test_case, *argvalues, name="test_method"):
+    all_cases = list(product(*argvalues))
+    test_methods = [f"{name}[{'-'.join(map(str, chain(*case)))}]" for case in all_cases]
+    assert set(test_methods) & set(test_case.__dict__)
+    assert isinstance(getattr(test_case, name), UnparametrizedMethod)
+    assert str(getattr(test_case, name)) == f"{name}[...]"
+    return all_cases
+
+
+def assert_tests_passed(test_case, tests_run, failures: List[Tuple[str, str,]] = None):
+    result = run_unittests(test_case)
+    assert result.testsRun == tests_run
+    assert not result.errors
+    assert not result.skipped
+    if failures is None:
+        assert not result.failures
+        return
+
+    assert len(result.failures) == len(failures)
+
+    for (method, message), (failed_test_case, fail_message) in zip(failures, result.failures):
+        assert failed_test_case._testMethodName == method
+        assert message in fail_message
+
+
+def test_simple_parametrize(mocker):
     test_mock = mocker.Mock("test_mock")
     values = [1, 2, 3]
 
@@ -22,25 +51,18 @@ def test_simple_parametrize_class(mocker):
             self.assertEqual(test_mock.return_value, test_mock(a))
             self.assertIn(a, (1, 2))
 
-    assert isinstance(TestSomething.test_method, UnparametrizedMethod)
-
-    test_methods = [f"test_method[{v}]" for v in values]
-    assert set(test_methods) & set(TestSomething.__dict__)
-
-    result = run_unittests(TestSomething)
-    assert result.testsRun == 3
-    assert not result.errors
-    assert not result.skipped
-    assert len(result.failures) == 1
-
-    failed_test_case, fail_message = result.failures[0]
-    assert failed_test_case._testMethodName == "test_method[3]"
-    assert ("self.assertIn(a, (1, 2))\n" "AssertionError: 3 not found in (1, 2)") in fail_message
-
+    assert_parametrized(TestSomething, as_tuples(values))
+    assert_tests_passed(
+        TestSomething,
+        tests_run=3,
+        failures=[
+            ("test_method[3]", "self.assertIn(a, (1, 2))\nAssertionError: 3 not found in (1, 2)")
+        ],
+    )
     assert test_mock.mock_calls == [mocker.call(v) for v in values]
 
 
-def test_multiple_arg_parametrize_class(mocker):
+def test_multiple_arg_parametrize(mocker):
     test_mock = mocker.Mock("test_mock")
     values = [("1", "2"), ("3", "4"), ("5", "6")]
 
@@ -50,27 +72,21 @@ def test_multiple_arg_parametrize_class(mocker):
             self.assertEqual(test_mock.return_value, test_mock(a, b))
             self.assertLess(int(a) + int(b), 11)
 
-    assert isinstance(TestSomething.test_method, UnparametrizedMethod)
-
-    test_methods = [f"test_method[{'-'.join(v)}]" for v in values]
-    assert set(test_methods) & set(TestSomething.__dict__)
-
-    result = run_unittests(TestSomething)
-    assert result.testsRun == 3
-    assert not result.errors
-    assert not result.skipped
-    assert len(result.failures) == 1
-
-    failed_test_case, fail_message = result.failures[0]
-    assert failed_test_case._testMethodName == "test_method[5-6]"
-    assert (
-        "self.assertLess(int(a) + int(b), 11)" "\nAssertionError: 11 not less than 11"
-    ) in fail_message
-
+    assert_parametrized(TestSomething, values)
+    assert_tests_passed(
+        TestSomething,
+        tests_run=3,
+        failures=[
+            (
+                "test_method[5-6]",
+                "self.assertLess(int(a) + int(b), 11)\nAssertionError: 11 not less than 11",
+            )
+        ],
+    )
     assert test_mock.mock_calls == [mocker.call(*v) for v in values]
 
 
-def test_multiple_parametrize_class(mocker):
+def test_multiple_parametrize(mocker):
     test_mock = mocker.Mock("test_mock")
     ab_values = [("1", "2"), ("3", "4"), ("5", "6")]
     c_values = (1, 2, 3)
@@ -80,24 +96,21 @@ def test_multiple_parametrize_class(mocker):
         @parametrize("c", c_values)
         def test_method(self, a, b, c):
             self.assertEqual(test_mock.return_value, test_mock(c, a, b))
-            self.assertLess(int(a) + int(b), 11)
+            self.assertLess(int(a) + int(b), 11, msg=f"{c}")
 
-    assert isinstance(TestSomething.test_method, UnparametrizedMethod)
-
-    all_cases = list(product([(v,) for v in c_values], ab_values))
-    test_methods = [f"test_method[{'-'.join(map(str, chain(*case)))}]" for case in all_cases]
-    assert set(test_methods) & set(TestSomething.__dict__)
-
-    result = run_unittests(TestSomething)
-    assert result.testsRun == 9
-    assert not result.errors
-    assert not result.skipped
-    assert len(result.failures) == 3
-
-    for c_value, (failed_test_case, fail_message) in zip(c_values, result.failures):
-        assert failed_test_case._testMethodName == f"test_method[{c_value}-5-6]"
-        assert (
-            "self.assertLess(int(a) + int(b), 11)" "\nAssertionError: 11 not less than 11"
-        ) in fail_message
-
+    all_cases = assert_parametrized(TestSomething, as_tuples(c_values), ab_values)
+    assert_tests_passed(
+        TestSomething,
+        tests_run=9,
+        failures=[
+            (
+                f"test_method[{c}-5-6]",
+                (
+                    "self.assertLess(int(a) + int(b), 11, msg=f'{c}')\n"
+                    "AssertionError: 11 not less than 11 : " + f"{c}"
+                ),
+            )
+            for c in c_values
+        ],
+    )
     assert test_mock.mock_calls == [mocker.call(*chain(*v)) for v in all_cases]
