@@ -13,14 +13,14 @@ def test_parametrize_errors():
     ):
 
         @parametrize("a,b", (1, 2))
-        def f1(a, b):
+        def f(a, b):
             ...
 
     with pytest.raises(TypeError, match=re.escape("Arguments names reused: {'b'}")):
 
         @parametrize("a,b", [(1, 2), (3, 4)])
         @parametrize("b", (1, 2))
-        def f1(a, b):
+        def f(a, b):
             ...
 
     with pytest.raises(
@@ -28,5 +28,5 @@ def test_parametrize_errors():
     ):
 
         @parametrize("b", (1, 2))
-        def f1(a):
+        def f(a):
             ...

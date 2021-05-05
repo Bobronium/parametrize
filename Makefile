@@ -4,7 +4,7 @@ export PIP_CONFIG_FILE=$(shell pwd)/setup.cfg
 
 sources = parametrize
 black = black $(sources) tests
-flake8 = flake8 $(sources) --show-source
+flake8 = flake8 $(sources) tests --show-source
 isort = isort $(sources) tests
 
 all: lint flake mypy test
@@ -16,15 +16,11 @@ format:
 test:
 	pytest tests --cov=parametrize
 
-flake:
+flake8:
 	$(flake8)
 
 mypy:
 	mypy $(sources)
-
-lint:
-	$(isort) --check-only --df
-	$(black) --check --diff
 
 coverage: test
 	coverage html
