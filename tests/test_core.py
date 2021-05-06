@@ -24,7 +24,7 @@ def test_parametrize_errors():
             ...
 
     with pytest.raises(
-        TypeError, match=re.escape("Unexpected argument(s) {'b'} for function f1(a)")
+        TypeError, match=re.escape("Unexpected argument(s) {'b'} for function f(a)")
     ):
 
         @parametrize("b", (1, 2))
