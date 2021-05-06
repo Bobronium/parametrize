@@ -4,6 +4,8 @@ from types import CodeType, FunctionType
 from typing import Any, Tuple
 
 
+PY38 = sys.version_info >= (3, 8)
+
 CODE_ARGS: Tuple[str, ...] = (
     "co_argcount",
     # 'co_posonlyargcount',  # only present since 3.8
@@ -26,8 +28,8 @@ def copy_code(code: CodeType, **update: Any) -> CodeType:
     """
     Create a copy of code object with changed attributes
     """
-    if sys.version_info >= (3, 8):  # pragma: no cover
-        return code.replace(**update)
+    if PY38:  # pragma: no cover
+        return code.replace(**update)  # type: ignore
 
     new_args = [update.pop(arg, getattr(code, arg)) for arg in CODE_ARGS]
     if update:
