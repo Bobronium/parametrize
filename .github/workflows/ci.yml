@@ -33,7 +33,7 @@ jobs:
         run: poetry install --no-interaction --no-root
 
       - name: flake8
-      - run: |
+        run: |
           source $VENV
           make flake8
 
