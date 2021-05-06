@@ -37,11 +37,6 @@ jobs:
           source $VENV
           make flake8
 
-      - name: mypy
-        run: |
-          source $VENV
-          make mypy
-
   test:
     needs: lint
     strategy:
