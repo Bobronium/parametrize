@@ -63,7 +63,7 @@ def test_parametrized_function_defined_above_and_failing_to_complete_parametriza
             ...
 
     with pytest.raises(
-        TypeError,
+        RuntimeError,
         match="Failed to complete parametrization. "
         "Please make sure all parametrization done with decorators grouped in once place",
     ):
@@ -127,3 +127,39 @@ def test_calling_functon_during_parametrization():
         @parametrize("b", (2, 3))
         def f(a, b):
             return a, b
+
+
+def test_pre_parametrized_decorators_in_non_global_namespace():
+    c_values = (1, 2, 3)
+    c_parameters = parametrize("c", c_values)
+
+    with pytest.raises(
+        RuntimeError,
+        match=re.escape(
+            "Unable to find any parametrizes in decorators, "
+            "please rewrite decorator name to match any of detected names @{'parametrize'}"
+        ),
+    ):
+
+        class TestSomething:
+            @c_parameters
+            def test_method(self, a, b, c):
+                ...
+
+
+def test_pre_parametrized_decorators_in_non_global_namespace_with_another_decorators():
+    c_parameters = parametrize("a", (1, 2, 3))
+
+    with pytest.raises(
+        RuntimeError,
+        match=re.escape(
+            "Failed to complete parametrization. "
+            "Please make sure all parametrization done with decorators grouped in once place"
+        ),
+    ):
+
+        class TestSomething:
+            @parametrize("b", (1, 2))
+            @c_parameters
+            def test_method(self, a, b):
+                ...

@@ -16,6 +16,10 @@ def as_tuples(sequence):
     return [(v,) for v in sequence]
 
 
+A_B_VALUES = [("1", "2"), ("3", "4"), ("5", "6")]
+A_B_PARAMETERS = parametrize("a,b", A_B_VALUES)
+
+
 def assert_parametrized(test_case, *argvalues, name="test_method"):
     all_cases = list(product(*argvalues))
     test_methods = [f"{name}[{'-'.join(map(str, chain(*case)))}]" for case in all_cases]
@@ -159,7 +163,7 @@ def test_values_overlap(mocker):
     class TestSomething(TestCase):
         @parametrize("a,b", ab_values)
         def test_method(self, a, b):
-            self.assertEqual(test_mock.return_value, test_mock(b, a))
+            self.assertEqual(test_mock.return_value, test_mock(a, b))
 
     assert_parametrized(TestSomething, ab_values)
     assert_tests_passed(TestSomething, tests_run=4)
@@ -168,3 +172,34 @@ def test_values_overlap(mocker):
     assert sorted(test_mock.mock_calls, key=repr) == sorted(
         (mocker.call(*v) for v in ab_values), key=repr
     )
+
+
+def test_pre_parametrized_decorators(mocker):
+    test_mock = mocker.Mock("test_mock")
+    c_values = (1, 2, 3)
+
+    class TestSomething(TestCase):
+        c_parameters = parametrize("c", c_values)
+
+        @A_B_PARAMETERS
+        @c_parameters
+        def test_method(self, a, b, c):
+            self.assertEqual(test_mock.return_value, test_mock(c, a, b))
+            self.assertLess(int(a) + int(b), 11, msg=f"{c}")
+
+    all_cases = assert_parametrized(TestSomething, as_tuples(c_values), A_B_VALUES)
+    assert_tests_passed(
+        TestSomething,
+        tests_run=9,
+        failures=[
+            (
+                f"test_method[{c}-5-6]",
+                (
+                    'self.assertLess(int(a) + int(b), 11, msg=f"{c}")\n'
+                    "AssertionError: 11 not less than 11 : " + f"{c}"
+                ),
+            )
+            for c in c_values
+        ],
+    )
+    assert test_mock.mock_calls == [mocker.call(*chain(*v)) for v in all_cases]

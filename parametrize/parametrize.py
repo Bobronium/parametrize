@@ -100,7 +100,7 @@ def parametrize(argnames: Union[str, Iterable[str]], argvalues: Iterable[Any]):
         func_or_context: Union[FunctionType, ParametrizeContext]
     ) -> Union[ParametrizeContext, UnparametrizedMethod]:
         if isinstance(func_or_context, UnparametrizedMethod):  # we should never end up here
-            raise TypeError(
+            raise RuntimeError(
                 "Failed to complete parametrization. "
                 "Please make sure all parametrization done with decorators grouped in once place"
             )
@@ -190,6 +190,7 @@ def _count_parametrize_decorators(function, decoration_frame):
     # but for now this method works pretty well
     parametrized_count = 0
     parametrize_decorators_should_end = False
+    decorator_out_of_order = False
     for line in map(str.strip, lines):
         if line.startswith("def "):
             break
@@ -203,19 +204,24 @@ def _count_parametrize_decorators(function, decoration_frame):
                 parametrized_count += 1
                 break
         else:
-            another_decorator = line.startswith("@")
-            if another_decorator and parametrized_count:
+            is_another_decorator = line.startswith("@")
+            if is_another_decorator and parametrized_count:
                 parametrize_decorators_should_end = True
-            elif another_decorator:
-                raise TypeError(
-                    f"{line} must be defined before any of @{possible_definitions} decorators"
-                )
+            elif is_another_decorator:
+                decorator_out_of_order = line
 
     if not parametrized_count:
         raise RuntimeError(
             f"Unable to find any parametrizes in decorators, "
             f"please rewrite decorator name to match any of detected names @{possible_definitions}"
         )
+
+    if decorator_out_of_order:
+        raise TypeError(
+            f"{decorator_out_of_order} must be defined before any of "
+            f"@{possible_definitions} decorators"
+        )
+
     return parametrized_count
 
 
