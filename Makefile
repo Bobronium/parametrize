@@ -1,13 +1,13 @@
-.PHONY: all clean flake mypy isort requirements, lock, sync, pipenv, coverage, build_info
+.PHONY: all clean flake8 mypy isort requirements, lock, sync, pipenv, coverage, build_info
 
 export PIP_CONFIG_FILE=$(shell pwd)/setup.cfg
 
 sources = parametrize
 black = black $(sources) tests
-flake8 = flake8 $(sources) tests --show-source
+flake8 = flake8 $(sources) tests
 isort = isort $(sources) tests
 
-all: lint flake mypy test
+all: flake8 mypy test
 
 format:
 	$(isort)
