@@ -79,7 +79,7 @@ jobs:
       - name: Run mypy
         run: |
           source $VENV
-          make mypy
+          mypy parametrize
 
       - name: Run tests
         run: |
