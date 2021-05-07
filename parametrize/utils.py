@@ -4,38 +4,35 @@ from types import CodeType, FunctionType
 from typing import Any, Tuple
 
 
-PY38 = sys.version_info >= (3, 8)
+if sys.version_info >= (3, 8):
+    copy_code = CodeType.replace
+else:
+    PY_36_37_CODE_ARGS: Tuple[str, ...] = (
+        "co_argcount",
+        "co_kwonlyargcount",
+        "co_nlocals",
+        "co_stacksize",
+        "co_flags",
+        "co_code",
+        "co_consts",
+        "co_names",
+        "co_varnames",
+        "co_filename",
+        "co_name",
+        "co_firstlineno",
+        "co_lnotab",
+        "co_freevars",
+        "co_cellvars",
+    )
 
-PY_36_37_CODE_ARGS: Tuple[str, ...] = (
-    "co_argcount",
-    "co_kwonlyargcount",
-    "co_nlocals",
-    "co_stacksize",
-    "co_flags",
-    "co_code",
-    "co_consts",
-    "co_names",
-    "co_varnames",
-    "co_filename",
-    "co_name",
-    "co_firstlineno",
-    "co_lnotab",
-    "co_freevars",
-    "co_cellvars",
-)
-
-
-def copy_code(code: CodeType, **update: Any) -> CodeType:
-    """
-    Create a copy of code object with changed attributes
-    """
-    if PY38:  # pragma: no cover
-        return code.replace(**update)  # type: ignore
-
-    new_args = [update.pop(arg, getattr(code, arg)) for arg in PY_36_37_CODE_ARGS]
-    if update:
-        raise TypeError(f"Unexpected code attribute(s): {update}")
-    return CodeType(*new_args)
+    def copy_code(code: CodeType, **update: Any) -> CodeType:
+        """
+        Create a copy of code object with changed attributes
+        """
+        new_args = [update.pop(arg, getattr(code, arg)) for arg in PY_36_37_CODE_ARGS]
+        if update:
+            raise TypeError(f"Unexpected code attribute(s): {update}")
+        return CodeType(*new_args)
 
 
 def copy_func(f: FunctionType, name, defaults, signature: Signature):

@@ -1,13 +1,21 @@
+import sys
 from inspect import signature
 
 import pytest
 
-from parametrize.utils import PY38, PY_36_37_CODE_ARGS, copy_code, copy_func
+from parametrize.utils import copy_code, copy_func
 
 
+@pytest.mark.skipif(
+    sys.version_info >= (3, 8), reason="On PY38 builtin CodeType.replace method is used"
+)
 def test_copy_code():
     def f():
         return locals()["a"]
+
+    copied_without_changes = copy_code(f.__code__)
+    assert copied_without_changes == f.__code__
+    assert copied_without_changes is not f.__code__
 
     old_code = f.__code__
     assert old_code.co_varnames == ()
@@ -27,11 +35,9 @@ def test_copy_code():
     new_args = {}
     old_args = {}
 
-    unchanged_args = set(PY_36_37_CODE_ARGS) - {"co_varnames", "co_nlocals", "co_argcount"}
-    if PY38:
-        unchanged_args.add("co_posonlyargcount")
+    from parametrize.utils import PY_36_37_CODE_ARGS
 
-    for arg in unchanged_args:
+    for arg in set(PY_36_37_CODE_ARGS) - {"co_varnames", "co_nlocals", "co_argcount"}:
         new_args[arg] = getattr(new_code, arg)
         old_args[arg] = getattr(old_code, arg)
 
