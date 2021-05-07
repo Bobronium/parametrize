@@ -9,6 +9,10 @@ license = "MIT"
 target_version = ['py35', 'py36', 'py37', 'py38', 'py39']
 line-length = 100
 
+[tool.poetry-dynamic-versioning]
+vcs = "git"
+style = "semver"
+
 [tool.poetry.dependencies]
 python = "^3.6.2"
 
