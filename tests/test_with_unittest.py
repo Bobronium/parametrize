@@ -1,7 +1,7 @@
 from io import StringIO
 from itertools import chain, product
 from typing import List, Tuple, Type
-from unittest import TestCase, TextTestRunner, defaultTestLoader
+from unittest import TestCase, TextTestRunner, defaultTestLoader, mock
 
 from parametrize import parametrize
 from parametrize.parametrize import UnparametrizedMethod
@@ -28,8 +28,8 @@ def assert_parametrized(test_case, *argvalues, name="test_method"):
 def assert_tests_passed(test_case, tests_run, failures: List[Tuple[str, str]] = None):
     result = run_unittests(test_case)
     assert result.testsRun == tests_run
-    assert not result.errors
-    assert not result.skipped
+    assert result.errors == []
+    assert result.skipped == []
     if failures is None:
         assert not result.failures
         return
@@ -114,3 +114,57 @@ def test_multiple_parametrize(mocker):
         ],
     )
     assert test_mock.mock_calls == [mocker.call(*chain(*v)) for v in all_cases]
+
+
+bar = "bar"  # value to mock
+
+
+def test_usage_with_other_decorators(mocker):
+    test_mock = mocker.Mock("test_mock")
+    ab_values = [("1", "2"), ("3", "4"), ("5", "6")]
+    c_values = (1, 2, 3)
+
+    class TestSomething(TestCase):
+        @parametrize("a,b", ab_values)
+        @parametrize("c", c_values)
+        @mock.patch(f"{__name__}.bar")
+        def test_method(self, bar_mock, a, b, c):
+            self.assertEqual(test_mock.return_value, test_mock(c, a, b))
+            self.assertLess(int(a) + int(b), 11, msg=f"{c}")
+            self.assertIsInstance(bar_mock, mock.Mock)
+            self.assertIs(bar_mock, bar)
+
+    all_cases = assert_parametrized(TestSomething, as_tuples(c_values), ab_values)
+    assert_tests_passed(
+        TestSomething,
+        tests_run=9,
+        failures=[
+            (
+                f"test_method[{c}-5-6]",
+                (
+                    'self.assertLess(int(a) + int(b), 11, msg=f"{c}")\n'
+                    "AssertionError: 11 not less than 11 : " + f"{c}"
+                ),
+            )
+            for c in c_values
+        ],
+    )
+    assert test_mock.mock_calls == [mocker.call(*chain(*v)) for v in all_cases]
+
+
+def test_values_overlap(mocker):
+    test_mock = mocker.Mock("test_mock")
+    ab_values = ((1, "1"), ("1", 1), ("1", "1"), (1, 1))
+
+    class TestSomething(TestCase):
+        @parametrize("a,b", ab_values)
+        def test_method(self, a, b):
+            self.assertEqual(test_mock.return_value, test_mock(b, a))
+
+    assert_parametrized(TestSomething, ab_values)
+    assert_tests_passed(TestSomething, tests_run=4)
+    # FIXME:
+    # tests are generated in expected order, but for some reason executed in different one
+    assert sorted(test_mock.mock_calls, key=repr) == sorted(
+        (mocker.call(*v) for v in ab_values), key=repr
+    )

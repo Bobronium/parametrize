@@ -1,5 +1,8 @@
 import inspect
 import itertools
+import sys
+from contextlib import suppress
+from functools import partial, wraps
 from types import FrameType, FunctionType, ModuleType
 from typing import Any, Dict, Iterable, List, Set, Tuple, Union, cast
 
@@ -16,6 +19,15 @@ class UnparametrizedMethod:
 
     def __init__(self, func: FunctionType):
         self.func = func
+
+    def __getattribute__(self, item):
+        """
+        Forbid any usage of unparametrized object
+        """
+        if item in {"func", "__repr__", "__name__"}:
+            return object.__getattribute__(self, item)
+
+        raise AttributeError("UnparametrizedMethod should not be used anywhere")
 
     def __repr__(self):
         return f"{self.func.__name__}[...]"
@@ -60,6 +72,10 @@ class ParametrizeContext:
             yield {k: v for params in case for k, v in params}
 
     def __call__(self, *args, **kwargs):
+        """
+        We should never end up here.
+        This method is necessary just to ensure in case something goes wrong, it won't be unnoticed
+        """
         raise RuntimeError(
             f"Attempt to execute {self.func.__qualname__} before it was parametrized"
         )
@@ -84,7 +100,10 @@ def parametrize(argnames: Union[str, Iterable[str]], argvalues: Iterable[Any]):
         func_or_context: Union[FunctionType, ParametrizeContext]
     ) -> Union[ParametrizeContext, UnparametrizedMethod]:
         if isinstance(func_or_context, UnparametrizedMethod):  # we should never end up here
-            raise TypeError("Failed to complete parametrization")
+            raise TypeError(
+                "Failed to complete parametrization. "
+                "Please make sure all parametrization done with decorators grouped in once place"
+            )
 
         if isinstance(func_or_context, ParametrizeContext):
             context = func_or_context
@@ -101,7 +120,7 @@ def parametrize(argnames: Union[str, Iterable[str]], argvalues: Iterable[Any]):
             _set_test_cases(context)
             return UnparametrizedMethod(context.func)
 
-    decorator.__parametrize_decorator__ = True  # type: ignore
+    decorator.__parametrize_decorator__ = parametrize  # type: ignore
 
     return decorator
 
@@ -131,20 +150,32 @@ def _collect_parameters(argnames, argvalues) -> Tuple[ParametersList, Set[str]]:
     return parameters, argnames_set
 
 
-def _find_possible_decorators(namespace: Dict[str, Any], search_in_modules=True):
-    possible_definitions = set()
+def _find_possible_decorators(
+    namespace: Dict[str, Any], search_in_modules: bool = True
+) -> Set[str]:
+    possible_definitions: Set[str] = set()
+
+    if not search_in_modules and namespace.get("__name__") in sys.builtin_module_names:
+        # don't search in builtin modules
+        return possible_definitions
+
     for key, value in namespace.items():
-        if (
-            value is parametrize
-            or hasattr(value, "__parametrize_decorator__")
-            or (hasattr(value, "__wrapped__") and inspect.unwrap(value) is parametrize)
-        ):
-            possible_definitions.add(key)
-        elif search_in_modules and isinstance(value, ModuleType):
-            # allow usages like @my_module.my_predefined_params
-            possible_definitions.update(
-                _find_possible_decorators(value.__dict__, search_in_modules=False)
-            )
+        with suppress(ValueError):  # inspect.unwrap() may raise ValueError
+            if (
+                value is parametrize
+                or getattr(value, "__parametrize_decorator__", False) is parametrize
+                or (
+                    hasattr(value, "__dict__")
+                    and "__wrapped__" in value.__dict__
+                    and inspect.unwrap(value) is parametrize
+                )
+            ):
+                possible_definitions.add(key)
+            elif search_in_modules and isinstance(value, ModuleType):
+                # allow usages like @my_module.my_predefined_params
+                possible_definitions.update(
+                    _find_possible_decorators(value.__dict__, search_in_modules=False)
+                )
 
     return possible_definitions
 
@@ -158,12 +189,27 @@ def _count_parametrize_decorators(function, decoration_frame):
     # maybe it would be safer/better to use ast.parse for that
     # but for now this method works pretty well
     parametrized_count = 0
+    parametrize_decorators_should_end = False
     for line in map(str.strip, lines):
         if line.startswith("def "):
             break
         for definition in possible_definitions:
             if line.startswith(f"@{definition}"):
+                if parametrize_decorators_should_end:
+                    raise TypeError(
+                        f"Parametrize decorator {line} must be grouped "
+                        f"together with other parametrize decorators"
+                    )
                 parametrized_count += 1
+                break
+        else:
+            another_decorator = line.startswith("@")
+            if another_decorator and parametrized_count:
+                parametrize_decorators_should_end = True
+            elif another_decorator:
+                raise TypeError(
+                    f"{line} must be defined before any of @{possible_definitions} decorators"
+                )
 
     if not parametrized_count:
         raise RuntimeError(
@@ -192,10 +238,22 @@ def _set_test_cases(context):
         used_names.add(final_parameters_str)
         parametrized_name = f"{func_name}[{final_parameters_str}]"
         if parametrized_name in namespace:
-            raise NameError(f"{parametrized_name} is already defined in {namespace}")
+            raise NameError(
+                f"{func_name!r} parametrized with [{final_parameters_str}] is already defined above"
+            )
 
-        # copying function with new default values. The reasons I didn't stick to simpler options:"
-        # functools.partial will not bound to class
+        # creating a wrapper function.
+        # functools.partial alone will not bound to class
         # functools.partialmethod and other descriptors won't be detected as tests
-        # wrapper function will add a new frame to traceback
-        namespace[parametrized_name] = copy_func(func, parametrized_name, params, context.signature)
+        def get_parametrized_method(f, name, parameters):
+            parametrized_func = partial(f, **parameters)
+
+            # copying func with new default parameters and name is necessary for introspection
+            # without it, pytest, for example would think that parametrized values are fixtures
+            @wraps(copy_func(f, name, parameters, context.signature))
+            def parametrized_method(*args, **kwargs):
+                return parametrized_func(*args, **kwargs)
+
+            return parametrized_method
+
+        namespace[parametrized_name] = get_parametrized_method(func, parametrized_name, params)
