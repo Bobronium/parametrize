@@ -83,9 +83,6 @@ jobs:
       - name: Run mypy
         run: |
           source $VENV
-          python --version
-          which python
-          python -m mypy
           mypy parametrize
 
       - name: Run tests
