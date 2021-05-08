@@ -26,7 +26,7 @@ jobs:
         id: cached-pip-wheels
         uses: actions/cache@v2
         with:
-          path: ~/.cache
+          path: ["~/.cache", "poetry.lock"]
           key: venv-${{ runner.os }}-${{ hashFiles('**/pyproject.toml') }}
 
       - name: Install dependencies
@@ -65,7 +65,7 @@ jobs:
         id: cached-pip-wheels
         uses: actions/cache@v2
         with:
-          path: ["~/.cache", "poetry.lock"]
+          path: ~/.cache
           key: venv-${{ runner.os }}-${{ matrix.python-version }}-${{ hashFiles('**/pyproject.toml') }}
 
       - name: Install dependencies
