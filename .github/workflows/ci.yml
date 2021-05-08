@@ -35,8 +35,7 @@ jobs:
         run: poetry install --no-interaction --no-root
 
       - name: flake8
-        run: |
-          flake8 parametrize tests
+        run: flake8 parametrize tests
 
   test:
     needs: lint
@@ -76,12 +75,10 @@ jobs:
         run: poetry install --no-interaction --no-root
 
       - name: Run mypy
-        run: |
-          mypy parametrize
+        run: mypy parametrize
 
       - name: Run tests
-        run: |
-          pytest tests --cov=parametrize
+        run: pytest tests --cov=parametrize
 
 
   deploy:
