@@ -28,7 +28,6 @@ jobs:
         with:
         path: |
           ~/cache
-          poetry.lock
         key: venv-${{ runner.os }}-${{ hashFiles('**/pyproject.toml') }}
 
       - name: Install dependencies
