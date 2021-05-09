@@ -1,3 +1,8 @@
+[![CI](https://github.com/MrMrRobat/parametrize/workflows/CI/badge.svg?event=push)](https://github.com/MrMrRobat/parametrize/actions?query=event%3Apush+branch%3Amaster+workflow%3ACI)
+[![PyPi](https://img.shields.io/pypi/v/parametrize.svg)](https://pypi.python.org/pypi/parametrize)
+[![Python Versions](https://img.shields.io/pypi/pyversions/parametrize.svg)](https://github.com/MrMrRobat/parametrize)
+[![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
+
 ## Drop-in `@pytest.mark.parametrize` replacement working with `unittest.TestCase`
 
 ### Why?
