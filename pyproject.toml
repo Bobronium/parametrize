@@ -4,9 +4,24 @@ version = "0.0.0"
 description = "Drop-in @pytest.mark.parametrize replacement working with unittest.TestCase"
 authors = ["MrMrRobat <appkiller16@gmail.com>"]
 license = "MIT"
+repository = "https://github.com/MrMrRobat/parametrize/"
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Framework :: Pytest",
+    "Intended Audience :: Developers",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.6",
+    "Programming Language :: Python :: Implementation :: CPython",
+    "Topic :: Software Development :: Testing",
+    "Topic :: Software Development :: Testing :: Unit",
+    "Topic :: Software Development :: Libraries",
+    "Typing :: Typed",
+]
 
 [tool.black]
-target_version = ['py35', 'py36', 'py37', 'py38', 'py39']
+target_version = ["py36", "py37", "py38", "py39"]
 line-length = 100
 
 [tool.poetry-dynamic-versioning]
