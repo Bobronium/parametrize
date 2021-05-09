@@ -85,8 +85,6 @@ jobs:
     needs: test
     if: "success() && startsWith(github.ref, 'refs/tags/')"
     runs-on: ubuntu-latest
-    env:
-      CHANGELOG_FILE: ${{ github.workflow }}-changelog.md
     steps:
       - uses: actions/checkout@v2
       - uses: actions/setup-python@v2
@@ -105,7 +103,7 @@ jobs:
         run: poetry-dynamic-versioning
 
       - name: Generate Changelog
-        run: python tools/get_changes.py ${{ github.ref }} > $CHANGELOG_FILE
+        run: python tools/get_changes.py ${{ github.ref }} > changelog.txt
 
       - name: Upload to pypi
         run: poetry publish --build --username __token__ --password ${{ secrets.PYPI_TOKEN }}
@@ -113,7 +111,7 @@ jobs:
       - name: Release
         uses: softprops/action-gh-release@v1
         with:
-          body_path: $CHANGELOG_FILE
+          body_path: changelog.txt
           files: |
             dist/parametrize-*-.tar.gz
             dist/parametrize-*-.whl

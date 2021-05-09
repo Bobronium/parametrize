@@ -4,6 +4,7 @@ version = "0.0.0"
 description = "Drop-in @pytest.mark.parametrize replacement working with unittest.TestCase"
 authors = ["MrMrRobat <appkiller16@gmail.com>"]
 license = "MIT"
+readme = "readme.md"
 repository = "https://github.com/MrMrRobat/parametrize/"
 classifiers = [
     "Development Status :: 3 - Alpha",
