@@ -158,3 +158,5 @@ crashlytics-build.properties
 fabric.properties
 
 poetry.lock
+
+*.py
