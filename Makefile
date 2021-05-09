@@ -32,3 +32,6 @@ clean:
 	@rm -rf `find . -type d -name .pytest_cache`
 	@rm -rf `find . -type d -name .mypy_cache`
 	@rm -rf *.egg-info
+	@rm -rf .coverage
+	@rm -rf htmlcov
+	@rm -rf poetry.lock
