@@ -2,18 +2,20 @@
 
 all: flake8 mypy test
 
+sources = parametrize tools
+
 format:
-	isort parametrize tests
-	black parametrize tests
+	isort $(sources) tests
+	black $(sources) tests
 
 flake8:
-	flake8 parametrize tests
+	flake8 $(sources) tests
 
 mypy:
-	mypy parametrize
+	mypy $(sources)
 
 test:
-	pytest tests --cov=parametrize
+	pytest tests --cov=$(sources)
 
 coverage: test
 	coverage html
