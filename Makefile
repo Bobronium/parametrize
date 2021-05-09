@@ -1,26 +1,19 @@
-.PHONY: all clean flake8 mypy isort requirements, lock, sync, pipenv, coverage, build_info
-
-export PIP_CONFIG_FILE=$(shell pwd)/setup.cfg
-
-sources = parametrize
-black = black $(sources) tests
-flake8 = flake8 $(sources) tests
-isort = isort $(sources) tests
+.PHONY: all clean format flake8 mypy test coverage install update
 
 all: flake8 mypy test
 
 format:
-	$(isort)
-	$(black)
+	isort parametrize tests
+	black parametrize tests
+
+flake8:
+	flake8 parametrize tests
+
+mypy:
+	mypy parametrize
 
 test:
 	pytest tests --cov=parametrize
-
-flake8:
-	$(flake8)
-
-mypy:
-	mypy $(sources)
 
 coverage: test
 	coverage html
