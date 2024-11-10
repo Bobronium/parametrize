@@ -21,6 +21,7 @@ jobs:
         uses: snok/install-poetry@v1.4.1
         with:
           virtualenvs-create: false
+          version: 1.1.15
 
       - name: Load cached wheels
         id: cached-pip-wheels
@@ -61,6 +62,7 @@ jobs:
         uses: snok/install-poetry@v1.4.1
         with:
           virtualenvs-create: false
+          version: 1.1.15
 
       - name: Load cached wheels
         id: cached-pip-wheels
@@ -95,6 +97,7 @@ jobs:
         uses: snok/install-poetry@v1.4.1
         with:
           virtualenvs-create: false
+          version: 1.1.15
 
       - name: Install poetry-dynamic-versioning
         run: python -m pip install poetry-dynamic-versioning
