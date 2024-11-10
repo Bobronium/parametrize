@@ -29,7 +29,7 @@ def assert_parametrized(test_case, *argvalues, name="test_method"):
     return all_cases
 
 
-def assert_tests_passed(test_case, tests_run, failures: List[Tuple[str, str]] = None):
+def assert_tests_passed(test_case, tests_run, failures: List[Tuple[str, Tuple[str, ...]]] = None):
     result = run_unittests(test_case)
     assert result.testsRun == tests_run
     assert result.errors == []
@@ -42,7 +42,8 @@ def assert_tests_passed(test_case, tests_run, failures: List[Tuple[str, str]] = 
 
     for (method, message), (failed_test_case, fail_message) in zip(failures, result.failures):
         assert failed_test_case._testMethodName == method
-        assert message in fail_message
+        for message_part in message:
+            assert message_part in fail_message
 
 
 def test_simple_parametrize(mocker):
@@ -60,7 +61,10 @@ def test_simple_parametrize(mocker):
         TestSomething,
         tests_run=3,
         failures=[
-            ("test_method[3]", "self.assertIn(a, (1, 2))\nAssertionError: 3 not found in (1, 2)")
+            (
+                "test_method[3]",
+                ("self.assertIn(a, (1, 2))", "AssertionError: 3 not found in (1, 2)"),
+            )
         ],
     )
     assert test_mock.mock_calls == [mocker.call(v) for v in values]
@@ -83,7 +87,7 @@ def test_multiple_arg_parametrize(mocker):
         failures=[
             (
                 "test_method[5-6]",
-                "self.assertLess(int(a) + int(b), 11)\nAssertionError: 11 not less than 11",
+                ("self.assertLess(int(a) + int(b), 11)", "AssertionError: 11 not less than 11"),
             )
         ],
     )
@@ -110,8 +114,8 @@ def test_multiple_parametrize(mocker):
             (
                 f"test_method[{c}-5-6]",
                 (
-                    'self.assertLess(int(a) + int(b), 11, msg=f"{c}")\n'
-                    "AssertionError: 11 not less than 11 : " + f"{c}"
+                    'self.assertLess(int(a) + int(b), 11, msg=f"{c}")',
+                    "AssertionError: 11 not less than 11 : " + f"{c}",
                 ),
             )
             for c in c_values
@@ -146,8 +150,8 @@ def test_usage_with_other_decorators(mocker):
             (
                 f"test_method[{c}-5-6]",
                 (
-                    'self.assertLess(int(a) + int(b), 11, msg=f"{c}")\n'
-                    "AssertionError: 11 not less than 11 : " + f"{c}"
+                    'self.assertLess(int(a) + int(b), 11, msg=f"{c}")',
+                    "AssertionError: 11 not less than 11 : " + f"{c}",
                 ),
             )
             for c in c_values
@@ -195,8 +199,8 @@ def test_pre_parametrized_decorators(mocker):
             (
                 f"test_method[{c}-5-6]",
                 (
-                    'self.assertLess(int(a) + int(b), 11, msg=f"{c}")\n'
-                    "AssertionError: 11 not less than 11 : " + f"{c}"
+                    'self.assertLess(int(a) + int(b), 11, msg=f"{c}")',
+                    "AssertionError: 11 not less than 11 : " + f"{c}",
                 ),
             )
             for c in c_values
