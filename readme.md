@@ -98,7 +98,7 @@ It's likely you will never face most of them, but if you will, `@parametrize` wi
     def f(a):
         ...
   
-    parametrize('a', (1, 2))(func)
+    parametrize('a', (1, 2))(f)
     ```
     ```py
     RuntimeError: Unable to find any parametrizes in decorators, please rewrite decorator name to match any of detected names @{'parametrize'}
