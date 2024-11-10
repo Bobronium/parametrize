@@ -97,7 +97,7 @@ jobs:
           virtualenvs-create: false
 
       - name: Install poetry-dynamic-versioning
-        run: python -m pip install pip install poetry-dynamic-versioning
+        run: python -m pip install poetry-dynamic-versioning
 
       - name: Bump version
         run: poetry-dynamic-versioning
