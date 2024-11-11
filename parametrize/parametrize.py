@@ -97,7 +97,7 @@ def parametrize(argnames: Union[str, Iterable[str]], argvalues: Iterable[Any]):
     parameters, argnames_set = _collect_parameters(argnames, argvalues)
 
     def decorator(
-        func_or_context: Union[FunctionType, ParametrizeContext]
+        func_or_context: Union[FunctionType, ParametrizeContext],
     ) -> Union[ParametrizeContext, UnparametrizedMethod]:
         if isinstance(func_or_context, UnparametrizedMethod):  # we should never end up here
             raise RuntimeError(

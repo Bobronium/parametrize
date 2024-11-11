@@ -50,14 +50,14 @@ def copy_func(f: FunctionType, name, defaults, signature: Signature):
             new_defaults.append(defaults.pop(key))
         elif param.default is not param.empty:
             new_defaults.append(param.default)
-    
+
     original_code = f.__code__
     code_replacements = {"co_name": name}
     if hasattr(original_code, "co_qualname"):
         *path, _old_name = original_code.co_qualname.rsplit(".", maxsplit=1)
         path.append(name)
         code_replacements["co_qualname"] = ".".join(path)
-    
+
     new_func = FunctionType(
         code=copy_code(original_code, **code_replacements),
         globals=f.__globals__,
