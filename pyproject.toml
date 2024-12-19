@@ -65,10 +65,10 @@ dev = [
 version = {vcs = "git", style = "semver"}
 
 [build-system]
-requires = ["hatchling", "uv-dynamic-versioning"]
+requires = ["hatchling", "hatch-vcs"]
 build-backend = "hatchling.build"
 
 [tool.hatch.version]
-source = "uv-dynamic-versioning"
+source = "vcs"
 vcs = "git"
 style = "semver"
