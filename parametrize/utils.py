@@ -53,8 +53,8 @@ def copy_func(f: FunctionType, name, defaults, signature: Signature):
 
     original_code = f.__code__
     code_replacements = {"co_name": name}
-    if hasattr(original_code, "co_qualname"):
-        *path, _old_name = original_code.co_qualname.rsplit(".", maxsplit=1)
+    if (qualname := getattr(original_code, "co_qualname", None)) is not None:
+        *path, _old_name = qualname.rsplit(".", maxsplit=1)
         path.append(name)
         code_replacements["co_qualname"] = ".".join(path)
 
