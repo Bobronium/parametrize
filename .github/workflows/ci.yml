@@ -98,7 +98,7 @@ jobs:
         run: uv sync --extra test
 
       - name: Run tests
-        run: pytest tests --cov=parametrize
+        run: uv run pytest tests --cov=parametrize
 
   deploy:
     needs: test
